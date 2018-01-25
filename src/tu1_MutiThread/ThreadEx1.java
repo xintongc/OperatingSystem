@@ -1,4 +1,4 @@
-package Tu1_MutiThread;
+package tu1_MutiThread;
 
 public class ThreadEx1 extends Thread {
 

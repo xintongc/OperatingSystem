@@ -1,4 +1,4 @@
-package Tu1_MutiThread;
+package tu1_MutiThread;
 
 public class ThreadBalance {
     private int balance = 0;
@@ -55,6 +55,7 @@ public class ThreadBalance {
     public synchronized void sub(){
         balance = balance - 1;
     }
+    //if there is no synchronized, the value of balance may not correctly readed
 
 
 }

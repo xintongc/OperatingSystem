@@ -1,4 +1,4 @@
-package Tu1_MutiThread;
+package tu1_MutiThread;
 
 public class ThreadExample3 implements Runnable {
 
@@ -13,4 +13,5 @@ public class ThreadExample3 implements Runnable {
             System.out.println(name + " value " + i);
         }
     }
+
 }
