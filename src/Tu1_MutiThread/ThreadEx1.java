@@ -1,3 +1,5 @@
+package Tu1_MutiThread;
+
 public class ThreadEx1 extends Thread {
 
     private String name;

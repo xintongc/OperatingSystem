@@ -1,3 +1,5 @@
+package Tu1_MutiThread;
+
 public class ThreadBalance {
     private int balance = 0;
 

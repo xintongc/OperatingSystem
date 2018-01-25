@@ -1,3 +1,5 @@
+package Tu1_MutiThread;
+
 public class Test3 {
     public static void main(String[] args) {
         Thread t1 = new Thread(new ThreadExample3("alpha"));

@@ -1,3 +1,5 @@
+package Tu1_MutiThread;
+
 public class ThreadExample3 implements Runnable {
 
     private String name;
