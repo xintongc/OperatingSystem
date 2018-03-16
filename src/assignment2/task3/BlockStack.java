@@ -1,4 +1,4 @@
-package assignment2.task2;
+package assignment2.task3;
 
 /**
  * Class BlockStack

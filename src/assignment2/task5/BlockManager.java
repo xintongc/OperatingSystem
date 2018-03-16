@@ -1,4 +1,4 @@
-package assignment2.task2;// Import (aka include) some stuff.
+package assignment2.task5;// Import (aka include) some stuff.
 //import common.*;
 
 /**
@@ -7,11 +7,13 @@ package assignment2.task2;// Import (aka include) some stuff.
  *
  * @author Serguei A. Mokhov, mokhov@cs.concordia.ca;
  * Inspired by previous code by Prof. D. Probst
- * <p>
+ *
  * $Revision: 1.5 $
  * $Last Revision Date: 2018/02/04 $
+
  */
-public class BlockManager {
+public class BlockManager
+{
 	/**
 	 * The stack itself
 	 */
@@ -30,7 +32,7 @@ public class BlockManager {
 	/**
 	 * For atomicity
 	 */
-	//private static Semaphore mutex = new Semaphore(...);
+	private static Semaphore mutex = new Semaphore(1);
 
 	/*
 	 * For synchronization
@@ -39,18 +41,20 @@ public class BlockManager {
 	/**
 	 * s1 is to make sure phase I for all is done before any phase II begins
 	 */
-	//private static Semaphore s1 = new Semaphore(...);
+	private static Semaphore s1 = new Semaphore(-9);
 
 	/**
 	 * s2 is for use in conjunction with Thread.turnTestAndSet() for phase II proceed
 	 * in the thread creation order
 	 */
-	//private static Semaphore s2 = new Semaphore(...);
+	private static Semaphore s2 = new Semaphore(1);
 
 
 	// The main()
-	public static void main(String[] argv) {
-		try {
+	public static void main(String[] argv)
+	{
+		try
+		{
 			// Some initial stats...
 			System.out.println("Main thread starts executing.");
 			System.out.println("Initial value of top = " + soStack.getITop() + ".");
@@ -73,10 +77,10 @@ public class BlockManager {
 			System.out.println("main(): Three ReleaseBlock threads have been created.");
 
 			// Create an array object first
-			CharStackProber aStackProbers[] = new CharStackProber[NUM_PROBERS];
+			CharStackProber	aStackProbers[] = new CharStackProber[NUM_PROBERS];
 
 			// Then the CharStackProber objects
-			for (int i = 0; i < NUM_PROBERS; i++)
+			for(int i = 0; i < NUM_PROBERS; i++)
 				aStackProbers[i] = new CharStackProber();
 
 			System.out.println("main(): CharStackProber threads have been created: " + NUM_PROBERS);
@@ -111,7 +115,7 @@ public class BlockManager {
 			rb2.join();
 			rb3.join();
 
-			for (int i = 0; i < NUM_PROBERS; i++)
+			for(int i = 0; i < NUM_PROBERS; i++)
 				aStackProbers[i].join();
 
 			// Some final stats after all the child threads terminated...
@@ -122,12 +126,18 @@ public class BlockManager {
 			System.out.println("Stack access count = " + soStack.getAccessCounter());
 
 			System.exit(0);
-		} catch (InterruptedException e) {
+		}
+		catch(InterruptedException e)
+		{
 			System.err.println("Caught InterruptedException (internal error): " + e.getMessage());
 			e.printStackTrace(System.err);
-		} catch (Exception e) {
+		}
+		catch(Exception e)
+		{
 			reportException(e);
-		} finally {
+		}
+		finally
+		{
 			System.exit(1);
 		}
 	} // main()
@@ -136,29 +146,28 @@ public class BlockManager {
 	/**
 	 * Inner AcquireBlock thread class.
 	 */
-	static class AcquireBlock extends BaseThread {
+	static class AcquireBlock extends BaseThread
+	{
 		/**
 		 * A copy of a block returned by pop().
-		 * //		 * @see BlocStack#pop()
+		 //		 * @see BlocStack#pop()
 		 */
 		private char cCopy;
 
-		public void run() {
+		public void run()
+		{
 			System.out.println("AcquireBlock thread [TID=" + this.iTID + "] starts executing.");
 
 
 			phase1();
 
 
-			try {
+			try
+			{
+				mutex.P();
 				System.out.println("AcquireBlock thread [TID=" + this.iTID + "] requests Ms block.");
 
-
-				if (soStack.isEmpty()) {
-					throw new ArrayIndexOutOfBoundsException();
-				} else {                    //only non-empty stack can be popped.
-					this.cCopy = soStack.pop();
-				}
+				this.cCopy = soStack.pop();
 
 				System.out.println
 						(
@@ -178,12 +187,27 @@ public class BlockManager {
 								"Acq[TID=" + this.iTID + "]: Current value of stack top = " +
 										soStack.pick() + "."
 						);
-			} catch (Exception e) {
+			}
+			catch(Exception e)
+			{
 				reportException(e);
 				System.exit(1);
 			}
+			finally {// to make sure it will always release
+				mutex.V();
+			}
 
+			s1.V();
+			s1.P();
+			s1.V();
+			s2.P();//second lock to lock phase2 to get right order of threads
+			while(!this.turnTestAndSet(true)){//indicate it is not increasing order
+				s2.V();
+				s2.P();
+			}
 			phase2();
+			s2.V();
+
 
 
 			System.out.println("AcquireBlock thread [TID=" + this.iTID + "] terminates.");
@@ -194,25 +218,26 @@ public class BlockManager {
 	/**
 	 * Inner class ReleaseBlock.
 	 */
-	static class ReleaseBlock extends BaseThread {
+	static class ReleaseBlock extends BaseThread
+	{
 		/**
 		 * Block to be returned. Default is 'a' if the stack is empty.
 		 */
 		private char cBlock = 'a';
 
-		public void run() {
+		public void run()
+		{
 			System.out.println("ReleaseBlock thread [TID=" + this.iTID + "] starts executing.");
 
 
 			phase1();
 
 
-			try {
-				if (soStack.isEmpty() == false) {
-					this.cBlock = (char) (soStack.pick() + 1);
-				} else {
-					throw new ArrayIndexOutOfBoundsException();
-				}
+			try
+			{
+				mutex.P();
+				if(soStack.isEmpty() == false)
+					this.cBlock = (char)(soStack.pick() + 1);
 
 
 				System.out.println
@@ -220,11 +245,8 @@ public class BlockManager {
 								"ReleaseBlock thread [TID=" + this.iTID + "] returns Ms block " + this.cBlock +
 										" to position " + (soStack.getITop() + 1) + "."
 						);
-				if (soStack.getAt(5) == '$') {
-					soStack.push(this.cBlock);
-				} else {
-					throw new ArrayIndexOutOfBoundsException();
-				}
+
+				soStack.push(this.cBlock);
 
 				System.out.println
 						(
@@ -237,13 +259,27 @@ public class BlockManager {
 								"Rel[TID=" + this.iTID + "]: Current value of stack top = " +
 										soStack.pick() + "."
 						);
-			} catch (Exception e) {
+			}
+			catch(Exception e)
+			{
 				reportException(e);
 				System.exit(1);
 			}
+			finally {
+				mutex.V();
+			}
 
 
+			s1.V();
+			s1.P();
+			s1.V();
+			s2.P();//second lock to lock phase2 to get right order of threads
+			while(!this.turnTestAndSet(true)){//indicate it is not increasing order
+				s2.V();
+				s2.P();
+			}
 			phase2();
+			s2.V();
 
 
 			System.out.println("ReleaseBlock thread [TID=" + this.iTID + "] terminates.");
@@ -254,18 +290,23 @@ public class BlockManager {
 	/**
 	 * Inner class CharStackProber to dump stack contents.
 	 */
-	static class CharStackProber extends BaseThread {
-		public void run() {
+	static class CharStackProber extends BaseThread
+	{
+		public void run()
+		{
 			phase1();
 
 
-			try {
-				for (int i = 0; i < siThreadSteps; i++) {
+			try
+			{
+				mutex.P();
+				for(int i = 0; i < siThreadSteps; i++)
+				{
 					System.out.print("Stack Prober [TID=" + this.iTID + "]: Stack state: ");
 
 					// [s] - means ordinay slot of a stack
 					// (s) - current top of the stack
-					for (int s = 0; s < soStack.getISize(); s++)
+					for(int s = 0; s < soStack.getISize(); s++)
 						System.out.print
 								(
 										(s == BlockManager.soStack.getITop() ? "(" : "[") +
@@ -276,13 +317,27 @@ public class BlockManager {
 					System.out.println(".");
 
 				}
-			} catch (Exception e) {
+			}
+			catch(Exception e)
+			{
 				reportException(e);
 				System.exit(1);
 			}
+			finally {
+				mutex.V();
+			}
 
 
+			s1.V();
+			s1.P();
+			s1.V();
+			s2.P();//second lock to lock phase2 to get right order of threads
+			while(!this.turnTestAndSet(true)){
+				s2.V();
+				s2.P();
+			}
 			phase2();
+			s2.V();
 
 		}
 	} // class CharStackProber
@@ -290,24 +345,15 @@ public class BlockManager {
 
 	/**
 	 * Outputs exception information to STDERR
-	 *
 	 * @param poException Exception object to dump to STDERR
 	 */
-	private static void reportException(Exception poException) {
+	private static void reportException(Exception poException)
+	{
 		System.err.println("Caught exception : " + poException.getClass().getName());
 		System.err.println("Message          : " + poException.getMessage());
 		System.err.println("Stack Trace      : ");
 		poException.printStackTrace(System.err);
 	}
-
-	static class ArrayIndexOutOfBoundsException extends Exception {
-
-		public ArrayIndexOutOfBoundsException() {
-			super("Index out of bounds");
-			System.exit(0);
-		}
-	}
-}
-// class BlockManager
+} // class BlockManager
 
 // EOF
